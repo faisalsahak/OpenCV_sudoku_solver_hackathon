@@ -71,7 +71,78 @@ def play():
 
             cv2.imshow("Extracted #s", gray_scale_extracted_points)
 
-          
+            if flag == 0:
+
+                extracted_image_text = []
+                for y in range(9):
+                    extracted_line = "" # extracts the 9 rows of lines from the image
+                    for x in range(9):
+                        y2min = y * case + marge
+                        y2max = (y + 1) * case - marge
+                        x2min = x * case + marge
+                        x2max = (x + 1) * case - marge
+                        img = gray_scale_extracted_points[y2min:y2max, x2min:x2max]
+                        x = img.reshape(1, 28, 28, 1)
+                        if x.sum() > 10000:
+                            prediction = classifier.predict_classes(x)
+                            extracted_line += "{:d}".format(prediction[0])
+                        else:
+                            extracted_line += "{:d}".format(0)
+                    extracted_image_text.append(extracted_line)
+                print(extracted_image_text)
+                result = sol.sudoku(extracted_image_text)
+                solution_found = True
+            # print("Result:", result)
+            if solution_found:
+            	# screen_shot = pyautogui.screenshot()
+            	# screen_shot = cv2.cvtColor(np.array(screen_shot), cv2.COLOR_RGB2BGR)
+            	cv2.imwrite("Solution.png", frame)
+            # cv2.imshow('results', result)
+
+            if result is not None:
+                flag = 1
+                fond = np.zeros(
+                    shape=(grid_size, grid_size, 3), dtype=np.float32)
+                for y in range(len(result)):
+                    for x in range(len(result[y])):
+                        if extracted_image_text[y][x] == "0":
+                            cv2.putText(fond, "{:d}".format(result[y][x]), ((
+                                x) * case + marge + 3, (y + 1) * case - marge - 3), cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 0.9, (0, 0, 255), 1)
+                M = cv2.getPerspectiveTransform(coord2, coord1)
+                h, w, c = frame.shape
+                fondP = cv2.warpPerspective(fond, M, (w, h))
+                img2gray = cv2.cvtColor(fondP, cv2.COLOR_BGR2GRAY)
+                ret, mask = cv2.threshold(img2gray, 10, 255, cv2.THRESH_BINARY)
+                mask = mask.astype('uint8')
+                mask_inv = cv2.bitwise_not(mask)
+                img1_bg = cv2.bitwise_and(frame, frame, mask=mask_inv)
+                img2_fg = cv2.bitwise_and(fondP, fondP, mask=mask).astype('uint8')
+                dst = cv2.add(img1_bg, img2_fg)
+                dst = cv2.resize(dst, (1080, 620))
+                cv2.imshow("frame", dst)
+                cv2.imwrite("dst2.png", dst)
+                # cv2.imwrite("mask_inv.png", mask_inv)
+                # cv2.imwrite("img1_bg.png", img1_bg)
+                # cv2.imwrite("img2_fg.png", img2_fg)
+                # print("3")
+                # out.write(dst)
+
+            else:
+                frame = cv2.resize(frame, (1080, 620))
+                cv2.imshow("frame", frame)
+                # print("4")
+                # out.write(frame)
+
+        else:
+            flag = 0
+            frame = cv2.resize(frame, (1080, 620))
+            cv2.imshow("frame", frame)
+            # print("5")
+            # out.write(frame)
+
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
 
 
     # out.release()
